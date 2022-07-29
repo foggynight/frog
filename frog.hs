@@ -4,6 +4,11 @@
 
 import Text.Read
 
+-- misc ------------------------------------------------------------------------
+
+(//) :: Int -> Int -> Int
+(//) x y = floor (fromIntegral x / fromIntegral y)
+
 -- fexp ------------------------------------------------------------------------
 
 data FExp = FPrim Prim | FInt Int | FVoid | FError
@@ -86,16 +91,20 @@ primSwap (e1:e2:es) = e2:e1:es
 primSwap _ = [FError]
 
 primAdd :: Prim
-primAdd ((FInt n1):(FInt n2):es) = (FInt $ n1 + n2):es
+primAdd ((FInt n1):(FInt n2):es) = (FInt $ n2 + n1):es
 primAdd _ = [FError]
 
 primSub :: Prim
-primSub ((FInt n1):(FInt n2):es) = (FInt $ n1 - n2):es
+primSub ((FInt n1):(FInt n2):es) = (FInt $ n2 - n1):es
 primSub _ = [FError]
 
 primMul :: Prim
-primMul ((FInt n1):(FInt n2):es) = (FInt $ n1 * n2):es
+primMul ((FInt n1):(FInt n2):es) = (FInt $ n2 * n1):es
 primMul _ = [FError]
+
+primDiv :: Prim
+primDiv ((FInt n1):(FInt n2):es) = (FInt $ n2 // n1):es
+primDiv _ = [FError]
 
 -- main ------------------------------------------------------------------------
 
@@ -107,6 +116,7 @@ toplevel =
   , ("+", FPrim primAdd)
   , ("-", FPrim primSub)
   , ("*", FPrim primMul)
+  , ("/", FPrim primDiv)
   ]
 
 printBanner :: IO ()
