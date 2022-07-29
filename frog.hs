@@ -6,12 +6,13 @@ import Text.Read
 
 -- fexp ------------------------------------------------------------------------
 
-data FExp = FPrim Prim | FNum Int | FVoid
+data FExp = FPrim Prim | FInt Int | FVoid | FError
 
 instance Show FExp where
   show (FPrim _) = "prim"
-  show (FNum n) = show n
+  show (FInt n) = show n
   show (FVoid) = "void"
+  show (FError) = "error"
 
 -- stack -----------------------------------------------------------------------
 
@@ -61,7 +62,7 @@ eval w stk dict =
     Just (FPrim p) -> (p stk,dict)
     Nothing ->
       case num of
-        Just n  -> (stackPush (FNum n) stk,dict)
+        Just n  -> (stackPush (FInt n) stk,dict)
         Nothing -> (stk,dict)
   where exp = case dictLookup w dict of
                 Just (_,e) -> Just e
@@ -73,23 +74,40 @@ eval w stk dict =
 type Prim = Stack -> Stack
 
 primDrop :: Prim
-primDrop [] = [FNum (-1)]
+primDrop [] = [FError]
 primDrop (e:es) = es
 
 primDup :: Prim
-primDup [] = [FNum (-1)]
+primDup [] = [FError]
 primDup (e:es) = e:e:es
 
 primSwap :: Prim
 primSwap (e1:e2:es) = e2:e1:es
-primSwap _ = [FNum (-1)]
+primSwap _ = [FError]
+
+primAdd :: Prim
+primAdd ((FInt n1):(FInt n2):es) = (FInt $ n1 + n2):es
+primAdd _ = [FError]
+
+primSub :: Prim
+primSub ((FInt n1):(FInt n2):es) = (FInt $ n1 - n2):es
+primSub _ = [FError]
+
+primMul :: Prim
+primMul ((FInt n1):(FInt n2):es) = (FInt $ n1 * n2):es
+primMul _ = [FError]
 
 -- main ------------------------------------------------------------------------
 
 toplevelDict :: Dict
-toplevelDict = [ ("drop", FPrim primDrop)
-               , ("dup",  FPrim primDup)
-               , ("swap", FPrim primSwap) ]
+toplevelDict =
+  [ ("drop", FPrim primDrop)
+  , ("dup",  FPrim primDup)
+  , ("swap", FPrim primSwap)
+  , ("+", FPrim primAdd)
+  , ("-", FPrim primSub)
+  , ("*", FPrim primMul)
+  ]
 
 printBanner :: IO ()
 printBanner = mapM_ putStrLn ["FROG v0.0.0", "(C) 2022 Robert Coffey"]
