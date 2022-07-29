@@ -99,8 +99,8 @@ primMul _ = [FError]
 
 -- main ------------------------------------------------------------------------
 
-toplevelDict :: Dict
-toplevelDict =
+toplevel :: Dict
+toplevel =
   [ ("drop", FPrim primDrop)
   , ("dup",  FPrim primDup)
   , ("swap", FPrim primSwap)
@@ -118,7 +118,7 @@ printPrompt = putStr "> "
 main :: IO ()
 main =
   do printBanner
-     main' [] emptyStack toplevelDict
+     main' [] emptyStack toplevel
 
 main' :: [String] -> Stack -> Dict -> IO ()
 main' [] stk dict =
