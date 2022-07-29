@@ -11,13 +11,13 @@ import Text.Read
 
 -- fexp ------------------------------------------------------------------------
 
-data FExp = FPrim Prim | FInt Int | FVoid | FError
+data FExp = FPrim Prim | FInt Int | FVoid | FError String
 
 instance Show FExp where
   show (FPrim _) = "prim"
   show (FInt n) = show n
   show (FVoid) = "void"
-  show (FError) = "error"
+  show (FError msg) = "error: " ++ msg
 
 -- stack -----------------------------------------------------------------------
 
@@ -68,7 +68,7 @@ eval w stk dict =
     Nothing ->
       case num of
         Just n  -> (stackPush (FInt n) stk,dict)
-        Nothing -> (stk,dict)
+        Nothing -> ([FError "unknown word"],dict)
   where exp = case dictLookup w dict of
                 Just (_,e) -> Just e
                 Nothing    -> Nothing
@@ -79,32 +79,40 @@ eval w stk dict =
 type Prim = Stack -> Stack
 
 primDrop :: Prim
-primDrop [] = [FError]
+primDrop [] = [FError "stack underflow"]
 primDrop (e:es) = es
 
 primDup :: Prim
-primDup [] = [FError]
+primDup [] = [FError "stack underflow"]
 primDup (e:es) = e:e:es
+
+primOver :: Prim
+primOver [] = [FError "stack underflow"]
+primOver (e1:e2:es) = e2:e1:e2:es
 
 primSwap :: Prim
 primSwap (e1:e2:es) = e2:e1:es
-primSwap _ = [FError]
+primSwap _ = [FError "stack underflow"]
+
+primRot :: Prim
+primRot (e1:e2:e3:es) = e3:e1:e2:es
+primRot _ = [FError "stack underflow"]
 
 primAdd :: Prim
 primAdd ((FInt n1):(FInt n2):es) = (FInt $ n2 + n1):es
-primAdd _ = [FError]
+primAdd _ = [FError "stack underflow"]
 
 primSub :: Prim
 primSub ((FInt n1):(FInt n2):es) = (FInt $ n2 - n1):es
-primSub _ = [FError]
+primSub _ = [FError "stack underflow"]
 
 primMul :: Prim
 primMul ((FInt n1):(FInt n2):es) = (FInt $ n2 * n1):es
-primMul _ = [FError]
+primMul _ = [FError "stack underflow"]
 
 primDiv :: Prim
 primDiv ((FInt n1):(FInt n2):es) = (FInt $ n2 // n1):es
-primDiv _ = [FError]
+primDiv _ = [FError "stack underflow"]
 
 -- main ------------------------------------------------------------------------
 
@@ -112,7 +120,9 @@ toplevel :: Dict
 toplevel =
   [ ("drop", FPrim primDrop)
   , ("dup",  FPrim primDup)
+  , ("over",  FPrim primOver)
   , ("swap", FPrim primSwap)
+  , ("rot", FPrim primRot)
   , ("+", FPrim primAdd)
   , ("-", FPrim primSub)
   , ("*", FPrim primMul)
@@ -136,5 +146,11 @@ main' [] stk dict =
      printPrompt
      line <- getLine
      main' (words line) stk dict
-main' (w:ws) stk dict = main' ws stk' dict'
+main' (w:ws) stk dict
+  | err       = do putStrLn msg
+                   main' ws emptyStack dict'
+  | otherwise = main' ws stk' dict'
   where (stk',dict') = eval w stk dict
+        (err,msg) = case head stk' of
+                      FError msg -> (True,msg)
+                      otherwise  -> (False,"")
